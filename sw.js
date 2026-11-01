@@ -1,4 +1,4 @@
-const CACHE_NAME = 'digiumpire-v1';
+const CACHE_NAME = 'digiumpire-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -28,7 +28,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
+      return fetch(event.request).then((response) => {
         if (response && response.status === 200 && event.request.method === 'GET') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
