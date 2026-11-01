@@ -449,8 +449,12 @@ body {
   background: transparent;
   border: none;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
+  padding: 8px 4px;
+  min-width: 0;
+  -webkit-user-select: text;
+  user-select: text;
 }
 .player-item input:focus { outline: none; }
 .player-item .remove-btn {
