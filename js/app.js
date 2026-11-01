@@ -180,15 +180,13 @@ $$('.score-btn.run').forEach(btn => {
   });
 });
 
+// ===== Extras =====
 $$('.score-btn.extra').forEach(btn => {
   btn.addEventListener('click', () => {
     const type = btn.dataset.extra;
     if (type === 'wide') {
       addBall('Wide +1', 1, true, false, false);
       toast('Wide');
-    } else if (type === 'noball') {
-      addBall('No Ball +1', 1, true, false, false);
-      toast('No Ball');
     } else if (type === 'bye') {
       addBall('Bye +1', 1, true, false, true);
       toast('Bye');
@@ -199,6 +197,7 @@ $$('.score-btn.extra').forEach(btn => {
   });
 });
 
+// Wicket
 $('.score-btn.wicket').addEventListener('click', () => {
   if (state.wickets >= 10) {
     toast('All out!');
@@ -384,10 +383,6 @@ $('#speedStop').addEventListener('click', () => {
 $('#callWide').addEventListener('click', () => {
   addBall('Wide +1 (Camera)', 1, true, false, false);
   toast('Wide called');
-});
-$('#callNoBall').addEventListener('click', () => {
-  addBall('No Ball +1 (Camera)', 1, true, false, false);
-  toast('No Ball called');
 });
 
 function closePanels() {
