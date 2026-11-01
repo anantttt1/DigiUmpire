@@ -1,17 +1,17 @@
-/* ===== DigiUmpire – Modern Cricket Umpire PWA ===== */
+/* ===== DigiUmpire – Black & White Theme ===== */
 :root {
-  --bg: #0a1f12;
-  --bg-card: #122a1c;
-  --bg-elevated: #1a3a28;
-  --green: #22c55e;
-  --green-dark: #16a34a;
-  --green-light: #4ade80;
-  --accent: #fbbf24;
+  --bg: #0a0a0a;
+  --bg-card: #141414;
+  --bg-elevated: #1f1f1f;
+  --green: #ffffff;
+  --green-dark: #e5e5e5;
+  --green-light: #f5f5f5;
+  --accent: #ffffff;
   --red: #ef4444;
   --blue: #3b82f6;
-  --text: #f0fdf4;
-  --text-muted: #86efac;
-  --border: #1e3a2a;
+  --text: #fafafa;
+  --text-muted: #a3a3a3;
+  --border: #2a2a2a;
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 8px 32px rgba(0,0,0,0.4);
@@ -51,7 +51,7 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: linear-gradient(135deg, #16a34a, #15803d);
+  background: linear-gradient(135deg, #262626, #171717);
   padding: 10px 16px;
   padding-top: calc(10px + var(--safe-top));
   box-shadow: var(--shadow);
@@ -68,7 +68,7 @@ body {
 }
 .btn-install {
   background: white;
-  color: #15803d;
+  color: #0a0a0a;
   border: none;
   padding: 6px 14px;
   border-radius: 20px;
@@ -108,7 +108,7 @@ body {
   font-weight: 800;
   font-size: 18px;
   letter-spacing: -0.5px;
-  background: linear-gradient(90deg, var(--green-light), var(--accent));
+  background: linear-gradient(90deg, #ffffff, #a3a3a3);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -161,7 +161,7 @@ body {
 }
 
 .scoreboard {
-  background: linear-gradient(145deg, #143322, #0d2818);
+  background: linear-gradient(145deg, #1a1a1a, #111111);
   border-radius: var(--radius);
   padding: 20px;
   text-align: center;
@@ -233,8 +233,8 @@ body {
   border: 1px solid var(--border);
 }
 .batsman-card.active {
-  border-color: var(--green);
-  background: linear-gradient(135deg, #143322, #0f2a1c);
+  border-color: #ffffff;
+  background: linear-gradient(135deg, #1f1f1f, #141414);
 }
 .bowler-card {
   grid-column: 1 / -1;
@@ -286,7 +286,7 @@ body {
   cursor: pointer;
   transition: transform 0.1s, background 0.15s;
   font-family: inherit;
-  color: white;
+  color: #0a0a0a;
   box-shadow: 0 4px 0 rgba(0,0,0,0.25);
 }
 .score-btn:active {
@@ -294,24 +294,27 @@ body {
   box-shadow: 0 1px 0 rgba(0,0,0,0.25);
 }
 .score-btn.run {
-  background: linear-gradient(145deg, #22c55e, #16a34a);
+  background: linear-gradient(145deg, #f5f5f5, #e5e5e5);
 }
 .score-btn.run.boundary {
-  background: linear-gradient(145deg, #fbbf24, #f59e0b);
-  color: #1a1a1a;
+  background: linear-gradient(145deg, #ffffff, #d4d4d4);
+  color: #0a0a0a;
 }
 .score-btn.extra {
-  background: linear-gradient(145deg, #3b82f6, #2563eb);
+  background: linear-gradient(145deg, #404040, #262626);
   font-size: 12px;
   font-weight: 600;
+  color: #fafafa;
 }
 .score-btn.wicket {
-  background: linear-gradient(145deg, #ef4444, #dc2626);
+  background: linear-gradient(145deg, #ef4444, #b91c1c);
   font-size: 13px;
+  color: #fafafa;
 }
 .score-btn.undo {
-  background: linear-gradient(145deg, #64748b, #475569);
+  background: linear-gradient(145deg, #525252, #404040);
   font-size: 13px;
+  color: #fafafa;
 }
 
 .bottom-nav {
@@ -418,7 +421,7 @@ body {
 }
 .setup-section input:focus {
   outline: none;
-  border-color: var(--green);
+  border-color: #ffffff;
 }
 
 .panel-body h3 {
@@ -469,7 +472,7 @@ body {
   cursor: pointer;
   margin-bottom: 8px;
 }
-.btn-add:hover { border-color: var(--green); color: var(--green-light); }
+.btn-add:hover { border-color: #ffffff; color: #f5f5f5; }
 
 .panel-actions {
   display: flex;
@@ -487,8 +490,8 @@ body {
   font-family: inherit;
 }
 .btn-primary {
-  background: linear-gradient(135deg, var(--green), var(--green-dark));
-  color: white;
+  background: linear-gradient(135deg, #ffffff, #e5e5e5);
+  color: #0a0a0a;
 }
 .btn-secondary {
   background: var(--bg-elevated);
@@ -525,7 +528,7 @@ body {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: rgba(251, 191, 36, 0.7);
+  background: rgba(255, 255, 255, 0.7);
 }
 .wide-line.left { left: 18%; }
 .wide-line.right { right: 18%; }
@@ -545,8 +548,8 @@ body {
   border-radius: 4px;
   background: rgba(0,0,0,0.6);
 }
-.guide-label.wide-left { left: 4%; top: 10%; color: #fbbf24; }
-.guide-label.wide-right { right: 4%; top: 10%; color: #fbbf24; }
+.guide-label.wide-left { left: 4%; top: 10%; color: #ffffff; }
+.guide-label.wide-right { right: 4%; top: 10%; color: #ffffff; }
 .guide-label.crease { left: 50%; transform: translateX(-50%); bottom: 24%; color: #ef4444; }
 
 .camera-controls {
@@ -590,8 +593,8 @@ body {
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
-  background: var(--green);
-  color: white;
+  background: #ffffff;
+  color: #0a0a0a;
 }
 .btn-speed:disabled {
   opacity: 0.4;
@@ -618,9 +621,8 @@ body {
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
-  color: white;
 }
-.btn-decision.wide { background: #f59e0b; }
+.btn-decision.wide { background: #ffffff; color: #0a0a0a; }
 
 .ball-history {
   display: flex;

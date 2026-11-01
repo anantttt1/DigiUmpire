@@ -1,8 +1,8 @@
 /* ===== DigiUmpire – Core Logic ===== */
 
 const state = {
-  teamA: 'Team A',
-  teamB: 'Team B',
+  teamA: 'Mumbai Indians',
+  teamB: 'Chennai Super Kings',
   totalOvers: 20,
   innings: 1,
   runs: 0,
@@ -12,11 +12,11 @@ const state = {
   partnership: 0,
   history: [],
   batsmen: [
-    { name: 'Batsman 1', runs: 0, balls: 0, out: false },
-    { name: 'Batsman 2', runs: 0, balls: 0, out: false }
+    { name: 'Rohit Sharma', runs: 0, balls: 0, out: false },
+    { name: 'Virat Kohli', runs: 0, balls: 0, out: false }
   ],
   bowlers: [
-    { name: 'Bowler 1', overs: 0, balls: 0, runs: 0, wickets: 0 }
+    { name: 'Jasprit Bumrah', overs: 0, balls: 0, runs: 0, wickets: 0 }
   ],
   strikerIdx: 0,
   nonStrikerIdx: 1,
@@ -280,8 +280,8 @@ $('#addBowler').addEventListener('click', () => {
 });
 
 $('#saveSetup').addEventListener('click', () => {
-  state.teamA = $('#inputTeamA').value || 'Team A';
-  state.teamB = $('#inputTeamB').value || 'Team B';
+  state.teamA = $('#inputTeamA').value || 'Team 1';
+  state.teamB = $('#inputTeamB').value || 'Team 2';
   state.totalOvers = parseInt($('#inputOvers').value) || 20;
   closePanels();
   updateUI();
