@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a1f12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DigiUmpire" />
+  <meta name="description" content="Smart Cricket Umpire & Scoring App – Runs, Overs, Players, Camera Tools" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg" />
+  <title>DigiUmpire – Smart Cricket Scoring</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Install Banner -->
+  <div id="installBanner" class="install-banner hidden">
+    <div class="install-content">
+      <span>📱 DigiUmpire ko App ki tarah install karo</span>
+      <button id="installBtn" class="btn-install">Install</button>
+      <button id="dismissInstall" class="btn-dismiss">✕</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-icon">🏏</span>
+      <span class="logo-text">DigiUmpire</span>
+    </div>
+    <div class="header-actions">
+      <button id="themeToggle" class="icon-btn" title="Theme">🌙</button>
+      <button id="menuBtn" class="icon-btn" title="Menu">☰</button>
+    </div>
+  </header>
+
+  <!-- Main Score Display -->
+  <main class="score-main">
+    <div class="match-info">
+      <div class="team-names">
+        <span id="teamAName" class="team-name">Team A</span>
+        <span class="vs">vs</span>
+        <span id="teamBName" class="team-name">Team B</span>
+      </div>
+      <div class="innings-badge" id="inningsBadge">1st Innings</div>
+    </div>
+
+    <div class="scoreboard">
+      <div class="big-score">
+        <span id="totalRuns">0</span>
+        <span class="separator">/</span>
+        <span id="totalWickets">0</span>
+      </div>
+      <div class="overs-display">
+        <span id="oversText">0.0</span>
+        <span class="overs-label">Overs</span>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value" id="runRate">0.00</div>
+        <div class="stat-label">RR</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="partnership">0</div>
+        <div class="stat-label">Partnership</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="extras">0</div>
+        <div class="stat-label">Extras</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="ballsLeft">120</div>
+        <div class="stat-label">Balls Left</div>
+      </div>
+    </div>
+
+    <!-- Current Players -->
+    <div class="current-players">
+      <div class="batsman-card active" id="strikerCard">
+        <div class="player-role">Striker ★</div>
+        <div class="player-name" id="strikerName">Batsman 1</div>
+        <div class="player-stats"><span id="strikerRuns">0</span> (<span id="strikerBalls">0</span>)</div>
+      </div>
+      <div class="batsman-card" id="nonStrikerCard">
+        <div class="player-role">Non-Striker</div>
+        <div class="player-name" id="nonStrikerName">Batsman 2</div>
+        <div class="player-stats"><span id="nonStrikerRuns">0</span> (<span id="nonStrikerBalls">0</span>)</div>
+      </div>
+      <div class="bowler-card">
+        <div class="player-role">Bowler</div>
+        <div class="player-name" id="bowlerName">Bowler 1</div>
+        <div class="player-stats"><span id="bowlerOvers">0.0</span> • <span id="bowlerRuns">0</span>/<span id="bowlerWkts">0</span></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scoring Buttons -->
+  <section class="scoring-panel">
+    <div class="runs-grid">
+      <button class="score-btn run" data-runs="0">•</button>
+      <button class="score-btn run" data-runs="1">1</button>
+      <button class="score-btn run" data-runs="2">2</button>
+      <button class="score-btn run" data-runs="3">3</button>
+      <button class="score-btn run boundary" data-runs="4">4</button>
+      <button class="score-btn run boundary" data-runs="6">6</button>
+    </div>
+
+    <div class="extras-grid">
+      <button class="score-btn extra" data-extra="wide">Wide</button>
+      <button class="score-btn extra" data-extra="noball">No Ball</button>
+      <button class="score-btn extra" data-extra="bye">Bye</button>
+      <button class="score-btn extra" data-extra="legbye">Leg Bye</button>
+      <button class="score-btn wicket" data-wicket="true">Wicket</button>
+      <button class="score-btn undo" id="undoBtn">Undo</button>
+    </div>
+  </section>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="score">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Score</span>
+    </button>
+    <button class="nav-item" data-tab="players">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Players</span>
+    </button>
+    <button class="nav-item" data-tab="camera">
+      <span class="nav-icon">📷</span>
+      <span class="nav-label">Camera</span>
+    </button>
+    <button class="nav-item" data-tab="history">
+      <span class="nav-icon">📜</span>
+      <span class="nav-label">History</span>
+    </button>
+  </nav>
+
+  <!-- Players Modal / Tab Content -->
+  <div id="playersPanel" class="side-panel hidden">
+    <div class="panel-header">
+      <h2>Players & Setup</h2>
+      <button class="close-panel">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="setup-section">
+        <label>Team A Name</label>
+        <input type="text" id="inputTeamA" placeholder="India" value="Team A" />
+      </div>
+      <div class="setup-section">
+        <label>Team B Name</label>
+        <input type="text" id="inputTeamB" placeholder="Australia" value="Team B" />
+      </div>
+      <div class="setup-section">
+        <label>Total Overs</label>
+        <input type="number" id="inputOvers" min="1" max="50" value="20" />
+      </div>
+
+      <h3>Batting Lineup (Team A)</h3>
+      <div id="batsmenList" class="player-list"></div>
+      <button class="btn-add" id="addBatsman">+ Add Batsman</button>
+
+      <h3>Bowling Attack (Team B)</h3>
+      <div id="bowlersList" class="player-list"></div>
+      <button class="btn-add" id="addBowler">+ Add Bowler</button>
+
+      <div class="panel-actions">
+        <button class="btn-primary" id="saveSetup">Save & Start</button>
+        <button class="btn-secondary" id="resetMatch">Reset Match</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Tools Panel -->
+  <div id="cameraPanel" class="side-panel hidden">
+    <div class="panel-header">
+      <h2>Umpire Camera Tools</h2>
+      <button class="close-panel">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="camera-container">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <canvas id="overlayCanvas"></canvas>
+        <div class="camera-guides">
+          <div class="wide-line left"></div>
+          <div class="wide-line right"></div>
+          <div class="crease-line"></div>
+          <div class="guide-label wide-left">Wide</div>
+          <div class="guide-label wide-right">Wide</div>
+          <div class="guide-label crease">Crease (No-Ball)</div>
+        </div>
+      </div>
+
+      <div class="camera-controls">
+        <button id="startCamera" class="btn-primary">Start Camera</button>
+        <button id="stopCamera" class="btn-secondary hidden">Stop</button>
+      </div>
+
+      <div class="tool-section">
+        <h3>⚡ Ball Speed Estimator</h3>
+        <p class="hint">Bowler release pe START dabao, batsman tak ball pahuchte hi STOP.</p>
+        <div class="speed-timer">
+          <button id="speedStart" class="btn-speed">START</button>
+          <div id="speedDisplay" class="speed-value">-- km/h</div>
+          <button id="speedStop" class="btn-speed" disabled>STOP</button>
+        </div>
+        <p class="hint small">Approx value • Pitch length ~20.12m assumed</p>
+      </div>
+
+      <div class="tool-section">
+        <h3>📏 Wide / No-Ball Helper</h3>
+        <p class="hint">Camera mein wide lines aur crease overlay dikhega. Manually judge karo – yeh guide hai, final decision aapka.</p>
+        <div class="decision-btns">
+          <button class="btn-decision wide" id="callWide">Call Wide</button>
+          <button class="btn-decision noball" id="callNoBall">Call No-Ball</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Panel -->
+  <div id="historyPanel" class="side-panel hidden">
+    <div class="panel-header">
+      <h2>Ball-by-Ball</h2>
+      <button class="close-panel">✕</button>
+    </div>
+    <div class="panel-body">
+      <div id="ballHistory" class="ball-history"></div>
+      <button class="btn-secondary full" id="clearHistory">Clear History</button>
+    </div>
+  </div>
+
+  <!-- Menu Overlay -->
+  <div id="menuOverlay" class="menu-overlay hidden">
+    <div class="menu-content">
+      <button class="menu-item" data-action="new-innings">New Innings</button>
+      <button class="menu-item" data-action="export">Export Scorecard</button>
+      <button class="menu-item" data-action="about">About DigiUmpire</button>
+      <button class="menu-item close-menu">Close</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
