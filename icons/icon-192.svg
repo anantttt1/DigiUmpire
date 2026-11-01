@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#0a1f12"/>
+  <circle cx="96" cy="96" r="66" fill="#22c55e"/>
+  <circle cx="96" cy="96" r="42" fill="#fbbf24"/>
+  <circle cx="96" cy="96" r="28" fill="#0a1f12"/>
+  <text x="96" y="108" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="36" font-weight="900" fill="#f0fdf4">DU</text>
+</svg>
