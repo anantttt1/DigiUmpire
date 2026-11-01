@@ -1,563 +1,619 @@
-/* ===== DigiUmpire – Core Logic ===== */
+/* DigiUmpire - Mobile Safe */
+(function () {
+  'use strict';
 
-const state = {
-  teamA: 'Mumbai Indians',
-  teamB: 'Chennai Super Kings',
-  totalOvers: 20,
-  innings: 1,
-  runs: 0,
-  wickets: 0,
-  balls: 0,
-  extras: 0,
-  partnership: 0,
-  history: [],
-  batsmen: [
-    { name: 'Rohit Sharma', runs: 0, balls: 0, out: false },
-    { name: 'Virat Kohli', runs: 0, balls: 0, out: false }
-  ],
-  bowlers: [
-    { name: 'Jasprit Bumrah', overs: 0, balls: 0, runs: 0, wickets: 0 }
-  ],
-  strikerIdx: 0,
-  nonStrikerIdx: 1,
-  currentBowlerIdx: 0,
-  undoStack: []
-};
+  var state = {
+    teamA: 'Mumbai Indians',
+    teamB: 'Chennai Super Kings',
+    totalOvers: 20,
+    innings: 1,
+    runs: 0,
+    wickets: 0,
+    balls: 0,
+    extras: 0,
+    partnership: 0,
+    history: [],
+    batsmen: [
+      { name: 'Rohit Sharma', runs: 0, balls: 0, out: false },
+      { name: 'Virat Kohli', runs: 0, balls: 0, out: false }
+    ],
+    bowlers: [
+      { name: 'Jasprit Bumrah', overs: 0, balls: 0, runs: 0, wickets: 0 }
+    ],
+    strikerIdx: 0,
+    nonStrikerIdx: 1,
+    currentBowlerIdx: 0,
+    undoStack: []
+  };
 
-let deferredPrompt = null;
-let speedStartTime = null;
-let cameraStream = null;
+  var deferredPrompt = null;
+  var speedStartTime = null;
+  var cameraStream = null;
 
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
+  function $(sel) { return document.querySelector(sel); }
+  function $$(sel) { return document.querySelectorAll(sel); }
+  function el(id) { return document.getElementById(id); }
 
-function toast(msg, duration = 2500) {
-  const t = $('#toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.remove('hidden');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.add('hidden'), duration);
-}
-
-function getOversText() {
-  const overs = Math.floor(state.balls / 6);
-  const balls = state.balls % 6;
-  return `${overs}.${balls}`;
-}
-
-function getRunRate() {
-  if (state.balls === 0) return '0.00';
-  return ((state.runs / state.balls) * 6).toFixed(2);
-}
-
-function getBallsLeft() {
-  return Math.max(0, state.totalOvers * 6 - state.balls);
-}
-
-function currentBowler() {
-  return state.bowlers[state.currentBowlerIdx] || state.bowlers[0];
-}
-
-function updateUI() {
-  const el = (id) => document.getElementById(id);
-  if (el('totalRuns')) el('totalRuns').textContent = state.runs;
-  if (el('totalWickets')) el('totalWickets').textContent = state.wickets;
-  if (el('oversText')) el('oversText').textContent = getOversText();
-  if (el('runRate')) el('runRate').textContent = getRunRate();
-  if (el('partnership')) el('partnership').textContent = state.partnership;
-  if (el('extras')) el('extras').textContent = state.extras;
-  if (el('ballsLeft')) el('ballsLeft').textContent = getBallsLeft();
-  if (el('teamAName')) el('teamAName').textContent = state.teamA;
-  if (el('teamBName')) el('teamBName').textContent = state.teamB;
-  if (el('inningsBadge')) el('inningsBadge').textContent = state.innings === 1 ? '1st Innings' : '2nd Innings';
-
-  const striker = state.batsmen[state.strikerIdx];
-  const nonStriker = state.batsmen[state.nonStrikerIdx];
-  const bowler = currentBowler();
-
-  if (striker) {
-    if (el('strikerName')) el('strikerName').textContent = striker.name;
-    if (el('strikerRuns')) el('strikerRuns').textContent = striker.runs;
-    if (el('strikerBalls')) el('strikerBalls').textContent = striker.balls;
-  }
-  if (nonStriker) {
-    if (el('nonStrikerName')) el('nonStrikerName').textContent = nonStriker.name;
-    if (el('nonStrikerRuns')) el('nonStrikerRuns').textContent = nonStriker.runs;
-    if (el('nonStrikerBalls')) el('nonStrikerBalls').textContent = nonStriker.balls;
-  }
-  if (bowler) {
-    if (el('bowlerName')) el('bowlerName').textContent = bowler.name;
-    const bOvers = Math.floor(bowler.balls / 6);
-    const bBalls = bowler.balls % 6;
-    if (el('bowlerOvers')) el('bowlerOvers').textContent = `${bOvers}.${bBalls}`;
-    if (el('bowlerRuns')) el('bowlerRuns').textContent = bowler.runs;
-    if (el('bowlerWkts')) el('bowlerWkts').textContent = bowler.wickets;
+  function toast(msg, duration) {
+    duration = duration || 2500;
+    var t = el('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    if (t._timer) clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.add('hidden'); }, duration);
   }
 
-  renderHistory();
-  saveState();
-}
-
-function pushUndo() {
-  state.undoStack.push(JSON.parse(JSON.stringify({
-    runs: state.runs,
-    wickets: state.wickets,
-    balls: state.balls,
-    extras: state.extras,
-    partnership: state.partnership,
-    batsmen: state.batsmen,
-    bowlers: state.bowlers,
-    strikerIdx: state.strikerIdx,
-    nonStrikerIdx: state.nonStrikerIdx,
-    history: state.history
-  })));
-  if (state.undoStack.length > 30) state.undoStack.shift();
-}
-
-function addBall(desc, runs = 0, isExtra = false, isWicket = false, legalBall = true) {
-  pushUndo();
-
-  state.runs += runs;
-  state.partnership += runs;
-
-  if (isExtra) state.extras += runs;
-
-  if (legalBall) {
-    state.balls += 1;
-    const striker = state.batsmen[state.strikerIdx];
-    if (striker) {
-      striker.balls += 1;
-      if (!isExtra) striker.runs += runs;
-    }
-    const bowler = currentBowler();
-    if (bowler) {
-      bowler.balls += 1;
-      bowler.runs += runs;
-      if (isWicket) bowler.wickets += 1;
-    }
-  } else {
-    const bowler = currentBowler();
-    if (bowler) bowler.runs += runs;
-    if (!isExtra) {
-      const striker = state.batsmen[state.strikerIdx];
-      if (striker) striker.runs += runs;
-    }
+  function getOversText() {
+    return Math.floor(state.balls / 6) + '.' + (state.balls % 6);
   }
 
-  if (isWicket) {
-    state.wickets += 1;
-    state.partnership = 0;
-    const nextIdx = state.batsmen.findIndex((b, i) => !b.out && i !== state.strikerIdx && i !== state.nonStrikerIdx);
-    if (nextIdx !== -1) {
-      state.batsmen[state.strikerIdx].out = true;
-      state.strikerIdx = nextIdx;
-    }
+  function getRunRate() {
+    if (state.balls === 0) return '0.00';
+    return ((state.runs / state.balls) * 6).toFixed(2);
   }
 
-  if (!isWicket && runs % 2 === 1 && (legalBall || desc.includes('Bye'))) {
-    [state.strikerIdx, state.nonStrikerIdx] = [state.nonStrikerIdx, state.strikerIdx];
+  function getBallsLeft() {
+    return Math.max(0, state.totalOvers * 6 - state.balls);
   }
 
-  if (legalBall && state.balls % 6 === 0) {
-    [state.strikerIdx, state.nonStrikerIdx] = [state.nonStrikerIdx, state.strikerIdx];
-    toast(`Over complete • ${getOversText()}`);
+  function currentBowler() {
+    return state.bowlers[state.currentBowlerIdx] || state.bowlers[0];
   }
 
-  state.history.unshift({
-    over: getOversText(),
-    desc,
-    runs,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  });
-
-  updateUI();
-}
-
-$$('.score-btn.run').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const r = parseInt(btn.dataset.runs);
-    const labels = { 0: 'Dot', 1: '1 run', 2: '2 runs', 3: '3 runs', 4: 'FOUR!', 6: 'SIX!' };
-    addBall(labels[r] || `${r} runs`, r, false, false, true);
-    if (r === 4 || r === 6) toast(labels[r]);
-  });
-});
-
-$$('.score-btn.extra').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const type = btn.dataset.extra;
-    if (type === 'wide') {
-      addBall('Wide +1', 1, true, false, false);
-      toast('Wide');
-    } else if (type === 'bye') {
-      addBall('Bye +1', 1, true, false, true);
-      toast('Bye');
-    } else if (type === 'legbye') {
-      addBall('Leg Bye +1', 1, true, false, true);
-      toast('Leg Bye');
-    }
-  });
-});
-
-$('.score-btn.wicket')?.addEventListener('click', () => {
-  if (state.wickets >= 10) {
-    toast('All out!');
-    return;
-  }
-  addBall('WICKET!', 0, false, true, true);
-  toast('Wicket!');
-});
-
-$('#undoBtn')?.addEventListener('click', () => {
-  if (state.undoStack.length === 0) {
-    toast('Nothing to undo');
-    return;
-  }
-  const prev = state.undoStack.pop();
-  Object.assign(state, prev);
-  updateUI();
-  toast('Undone');
-});
-
-function syncPlayerNamesFromInputs() {
-  const batsList = $('#batsmenList');
-  const bowlList = $('#bowlersList');
-  if (batsList) {
-    batsList.querySelectorAll('input[data-type="bat"]').forEach(inp => {
-      const idx = parseInt(inp.dataset.idx);
-      if (state.batsmen[idx]) {
-        state.batsmen[idx].name = (inp.value || '').trim() || `Batsman ${idx + 1}`;
-      }
-    });
-  }
-  if (bowlList) {
-    bowlList.querySelectorAll('input[data-type="bowl"]').forEach(inp => {
-      const idx = parseInt(inp.dataset.idx);
-      if (state.bowlers[idx]) {
-        state.bowlers[idx].name = (inp.value || '').trim() || `Bowler ${idx + 1}`;
-      }
-    });
-  }
-}
-
-function renderPlayers() {
-  const batsList = $('#batsmenList');
-  const bowlList = $('#bowlersList');
-  if (!batsList || !bowlList) return;
-
-  batsList.innerHTML = '';
-  bowlList.innerHTML = '';
-
-  state.batsmen.forEach((b, i) => {
-    const div = document.createElement('div');
-    div.className = 'player-item';
-    div.innerHTML = `
-      <input type="text" value="${b.name.replace(/"/g, '&quot;')}" data-idx="${i}" data-type="bat" placeholder="Batsman name" />
-      <button type="button" class="remove-btn" data-idx="${i}" data-type="bat">✕</button>
-    `;
-    batsList.appendChild(div);
-  });
-
-  state.bowlers.forEach((b, i) => {
-    const div = document.createElement('div');
-    div.className = 'player-item';
-    div.innerHTML = `
-      <input type="text" value="${b.name.replace(/"/g, '&quot;')}" data-idx="${i}" data-type="bowl" placeholder="Bowler name" />
-      <button type="button" class="remove-btn" data-idx="${i}" data-type="bowl">✕</button>
-    `;
-    bowlList.appendChild(div);
-  });
-
-  batsList.querySelectorAll('input').forEach(inp => {
-    inp.addEventListener('input', (e) => {
-      const idx = parseInt(e.target.dataset.idx);
-      if (state.batsmen[idx]) {
-        state.batsmen[idx].name = e.target.value.trim() || `Batsman ${idx + 1}`;
-      }
-    });
-  });
-  bowlList.querySelectorAll('input').forEach(inp => {
-    inp.addEventListener('input', (e) => {
-      const idx = parseInt(e.target.dataset.idx);
-      if (state.bowlers[idx]) {
-        state.bowlers[idx].name = e.target.value.trim() || `Bowler ${idx + 1}`;
-      }
-    });
-  });
-
-  batsList.querySelectorAll('.remove-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (state.batsmen.length <= 2) return toast('Minimum 2 batsmen');
-      state.batsmen.splice(parseInt(btn.dataset.idx), 1);
-      if (state.strikerIdx >= state.batsmen.length) state.strikerIdx = 0;
-      if (state.nonStrikerIdx >= state.batsmen.length) state.nonStrikerIdx = Math.min(1, state.batsmen.length - 1);
-      renderPlayers();
-    });
-  });
-  bowlList.querySelectorAll('.remove-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (state.bowlers.length <= 1) return toast('Minimum 1 bowler');
-      state.bowlers.splice(parseInt(btn.dataset.idx), 1);
-      if (state.currentBowlerIdx >= state.bowlers.length) state.currentBowlerIdx = 0;
-      renderPlayers();
-    });
-  });
-}
-
-$('#addBatsman')?.addEventListener('click', () => {
-  state.batsmen.push({ name: `Batsman ${state.batsmen.length + 1}`, runs: 0, balls: 0, out: false });
-  renderPlayers();
-});
-$('#addBowler')?.addEventListener('click', () => {
-  state.bowlers.push({ name: `Bowler ${state.bowlers.length + 1}`, overs: 0, balls: 0, runs: 0, wickets: 0 });
-  renderPlayers();
-});
-
-$('#saveSetup')?.addEventListener('click', () => {
-  syncPlayerNamesFromInputs();
-  state.teamA = ($('#inputTeamA')?.value || '').trim() || 'Team 1';
-  state.teamB = ($('#inputTeamB')?.value || '').trim() || 'Team 2';
-  state.totalOvers = parseInt($('#inputOvers')?.value) || 20;
-  closePanels();
-  updateUI();
-  toast('✓ Match setup saved');
-});
-
-$('#resetMatch')?.addEventListener('click', () => {
-  if (!confirm('Reset entire match?')) return;
-  state.runs = 0;
-  state.wickets = 0;
-  state.balls = 0;
-  state.extras = 0;
-  state.partnership = 0;
-  state.history = [];
-  state.undoStack = [];
-  state.batsmen.forEach(b => { b.runs = 0; b.balls = 0; b.out = false; });
-  state.bowlers.forEach(b => { b.balls = 0; b.runs = 0; b.wickets = 0; });
-  state.strikerIdx = 0;
-  state.nonStrikerIdx = 1;
-  state.currentBowlerIdx = 0;
-  updateUI();
-  toast('Match reset');
-});
-
-function renderHistory() {
-  const box = $('#ballHistory');
-  if (!box) return;
-  box.innerHTML = state.history.slice(0, 50).map((h) => `
-    <div class="ball-item">
-      <span class="ball-num">${h.over}</span>
-      <span class="ball-desc">${h.desc}</span>
-      <span class="ball-runs">${h.runs > 0 ? '+' + h.runs : ''}</span>
-    </div>
-  `).join('') || '<p style="color:var(--text-muted);text-align:center;padding:20px;">No balls yet</p>';
-}
-
-$('#clearHistory')?.addEventListener('click', () => {
-  state.history = [];
-  renderHistory();
-});
-
-async function startCamera() {
-  stopCamera();
-  const video = $('#cameraVideo');
-  if (!video) {
-    toast('Video element not found');
-    return;
-  }
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    toast('Camera not supported on this browser');
-    return;
-  }
-  try {
-    let stream = null;
+  function updateUI() {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false
-      });
-    } catch (e1) {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false
-      });
-    }
-    cameraStream = stream;
-    video.srcObject = stream;
-    video.setAttribute('playsinline', true);
-    video.muted = true;
-    try { await video.play(); } catch (playErr) { console.warn(playErr); }
-    $('#startCamera')?.classList.add('hidden');
-    $('#stopCamera')?.classList.remove('hidden');
-    toast('📷 Camera started');
-  } catch (err) {
-    console.error('Camera error:', err);
-    let msg = 'Camera access failed';
-    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-      msg = 'Camera permission denied. Browser settings se allow karo.';
-    } else if (err.name === 'NotFoundError') {
-      msg = 'No camera found on this device';
-    } else if (err.name === 'NotReadableError') {
-      msg = 'Camera already in use by another app';
-    } else if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-      msg = 'Camera needs HTTPS. Deploy on Vercel first.';
-    }
-    toast(msg);
-  }
-}
+      if (el('totalRuns')) el('totalRuns').textContent = state.runs;
+      if (el('totalWickets')) el('totalWickets').textContent = state.wickets;
+      if (el('oversText')) el('oversText').textContent = getOversText();
+      if (el('runRate')) el('runRate').textContent = getRunRate();
+      if (el('partnership')) el('partnership').textContent = state.partnership;
+      if (el('extras')) el('extras').textContent = state.extras;
+      if (el('ballsLeft')) el('ballsLeft').textContent = getBallsLeft();
+      if (el('teamAName')) el('teamAName').textContent = state.teamA;
+      if (el('teamBName')) el('teamBName').textContent = state.teamB;
+      if (el('inningsBadge')) el('inningsBadge').textContent = state.innings === 1 ? '1st Innings' : '2nd Innings';
 
-function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} });
-    cameraStream = null;
-  }
-  const video = $('#cameraVideo');
-  if (video) video.srcObject = null;
-  $('#startCamera')?.classList.remove('hidden');
-  $('#stopCamera')?.classList.add('hidden');
-}
+      var striker = state.batsmen[state.strikerIdx];
+      var nonStriker = state.batsmen[state.nonStrikerIdx];
+      var bowler = currentBowler();
 
-$('#startCamera')?.addEventListener('click', startCamera);
-$('#stopCamera')?.addEventListener('click', stopCamera);
-
-$('#speedStart')?.addEventListener('click', () => {
-  speedStartTime = performance.now();
-  $('#speedStart').disabled = true;
-  $('#speedStop').disabled = false;
-  $('#speedDisplay').textContent = '...';
-  toast('Timing started – STOP when ball reaches batsman');
-});
-
-$('#speedStop')?.addEventListener('click', () => {
-  if (!speedStartTime) return;
-  const elapsed = (performance.now() - speedStartTime) / 1000;
-  const distance = 18.5;
-  const speedMs = distance / elapsed;
-  const speedKmh = Math.round(speedMs * 3.6);
-  $('#speedDisplay').textContent = `${speedKmh} km/h`;
-  $('#speedStart').disabled = false;
-  $('#speedStop').disabled = true;
-  speedStartTime = null;
-  let label = '';
-  if (speedKmh > 145) label = '🚀 Express!';
-  else if (speedKmh > 130) label = '🔥 Fast';
-  else if (speedKmh > 115) label = '⚡ Medium-Fast';
-  else label = '🎯 Medium';
-  toast(`${speedKmh} km/h ${label}`);
-});
-
-$('#callWide')?.addEventListener('click', () => {
-  addBall('Wide +1 (Camera)', 1, true, false, false);
-  toast('Wide called');
-});
-
-function closePanels() {
-  $$('.side-panel').forEach(p => p.classList.add('hidden'));
-  $$('.nav-item').forEach(n => n.classList.remove('active'));
-  const scoreNav = document.querySelector('.nav-item[data-tab="score"]');
-  if (scoreNav) scoreNav.classList.add('active');
-  stopCamera();
-}
-
-$$('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    const tab = item.dataset.tab;
-    closePanels();
-    item.classList.add('active');
-    if (tab === 'players') {
-      $('#playersPanel')?.classList.remove('hidden');
-      renderPlayers();
-      if ($('#inputTeamA')) $('#inputTeamA').value = state.teamA;
-      if ($('#inputTeamB')) $('#inputTeamB').value = state.teamB;
-      if ($('#inputOvers')) $('#inputOvers').value = state.totalOvers;
-    } else if (tab === 'camera') {
-      $('#cameraPanel')?.classList.remove('hidden');
-    } else if (tab === 'history') {
-      $('#historyPanel')?.classList.remove('hidden');
+      if (striker) {
+        if (el('strikerName')) el('strikerName').textContent = striker.name;
+        if (el('strikerRuns')) el('strikerRuns').textContent = striker.runs;
+        if (el('strikerBalls')) el('strikerBalls').textContent = striker.balls;
+      }
+      if (nonStriker) {
+        if (el('nonStrikerName')) el('nonStrikerName').textContent = nonStriker.name;
+        if (el('nonStrikerRuns')) el('nonStrikerRuns').textContent = nonStriker.runs;
+        if (el('nonStrikerBalls')) el('nonStrikerBalls').textContent = nonStriker.balls;
+      }
+      if (bowler) {
+        if (el('bowlerName')) el('bowlerName').textContent = bowler.name;
+        if (el('bowlerOvers')) el('bowlerOvers').textContent = Math.floor(bowler.balls / 6) + '.' + (bowler.balls % 6);
+        if (el('bowlerRuns')) el('bowlerRuns').textContent = bowler.runs;
+        if (el('bowlerWkts')) el('bowlerWkts').textContent = bowler.wickets;
+      }
       renderHistory();
+      saveState();
+    } catch (e) { console.error('updateUI', e); }
+  }
+
+  function pushUndo() {
+    try {
+      state.undoStack.push(JSON.parse(JSON.stringify({
+        runs: state.runs, wickets: state.wickets, balls: state.balls,
+        extras: state.extras, partnership: state.partnership,
+        batsmen: state.batsmen, bowlers: state.bowlers,
+        strikerIdx: state.strikerIdx, nonStrikerIdx: state.nonStrikerIdx,
+        history: state.history
+      })));
+      if (state.undoStack.length > 30) state.undoStack.shift();
+    } catch (e) {}
+  }
+
+  function addBall(desc, runs, isExtra, isWicket, legalBall) {
+    runs = runs || 0;
+    isExtra = !!isExtra;
+    isWicket = !!isWicket;
+    if (legalBall === undefined) legalBall = true;
+    pushUndo();
+    state.runs += runs;
+    state.partnership += runs;
+    if (isExtra) state.extras += runs;
+
+    if (legalBall) {
+      state.balls += 1;
+      var striker = state.batsmen[state.strikerIdx];
+      if (striker) {
+        striker.balls += 1;
+        if (!isExtra) striker.runs += runs;
+      }
+      var bowler = currentBowler();
+      if (bowler) {
+        bowler.balls += 1;
+        bowler.runs += runs;
+        if (isWicket) bowler.wickets += 1;
+      }
+    } else {
+      var bowler2 = currentBowler();
+      if (bowler2) bowler2.runs += runs;
+      if (!isExtra) {
+        var s2 = state.batsmen[state.strikerIdx];
+        if (s2) s2.runs += runs;
+      }
     }
-  });
-});
 
-$$('.close-panel').forEach(btn => {
-  btn.addEventListener('click', closePanels);
-});
-
-$('#menuBtn')?.addEventListener('click', () => {
-  $('#menuOverlay')?.classList.remove('hidden');
-});
-$$('.close-menu, .menu-overlay').forEach(el => {
-  el.addEventListener('click', (e) => {
-    if (e.target === el || el.classList.contains('close-menu')) {
-      $('#menuOverlay')?.classList.add('hidden');
+    if (isWicket) {
+      state.wickets += 1;
+      state.partnership = 0;
+      var nextIdx = -1;
+      for (var i = 0; i < state.batsmen.length; i++) {
+        if (!state.batsmen[i].out && i !== state.strikerIdx && i !== state.nonStrikerIdx) {
+          nextIdx = i; break;
+        }
+      }
+      if (nextIdx !== -1) {
+        state.batsmen[state.strikerIdx].out = true;
+        state.strikerIdx = nextIdx;
+      }
     }
-  });
-});
 
-$$('.menu-item[data-action]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const action = btn.dataset.action;
-    $('#menuOverlay')?.classList.add('hidden');
-    if (action === 'new-innings') {
-      state.innings = state.innings === 1 ? 2 : 1;
-      state.runs = 0; state.wickets = 0; state.balls = 0; state.extras = 0; state.partnership = 0; state.history = [];
-      state.batsmen.forEach(b => { b.runs = 0; b.balls = 0; b.out = false; });
-      state.bowlers.forEach(b => { b.balls = 0; b.runs = 0; b.wickets = 0; });
-      updateUI();
-      toast(`Innings ${state.innings} started`);
-    } else if (action === 'export') {
-      const text = `${state.teamA} vs ${state.teamB}\n${state.runs}/${state.wickets} (${getOversText()})\nRR: ${getRunRate()}\nExtras: ${state.extras}`;
-      navigator.clipboard?.writeText(text).then(() => toast('Scorecard copied!')).catch(() => toast(text));
-    } else if (action === 'about') {
-      toast('DigiUmpire v1.0 – Smart Cricket Scoring PWA');
+    if (!isWicket && runs % 2 === 1 && (legalBall || (desc && desc.indexOf('Bye') !== -1))) {
+      var tmp = state.strikerIdx;
+      state.strikerIdx = state.nonStrikerIdx;
+      state.nonStrikerIdx = tmp;
     }
-  });
-});
 
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  $('#installBanner')?.classList.remove('hidden');
-});
+    if (legalBall && state.balls % 6 === 0) {
+      var tmp2 = state.strikerIdx;
+      state.strikerIdx = state.nonStrikerIdx;
+      state.nonStrikerIdx = tmp2;
+      toast('Over complete • ' + getOversText());
+    }
 
-$('#installBtn')?.addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === 'accepted') toast('App installed!');
-  deferredPrompt = null;
-  $('#installBanner')?.classList.add('hidden');
-});
+    state.history.unshift({ over: getOversText(), desc: desc, runs: runs });
+    updateUI();
+  }
 
-$('#dismissInstall')?.addEventListener('click', () => {
-  $('#installBanner')?.classList.add('hidden');
-});
+  function stopCamera() {
+    if (cameraStream) {
+      try {
+        var tracks = cameraStream.getTracks();
+        for (var i = 0; i < tracks.length; i++) tracks[i].stop();
+      } catch (e) {}
+      cameraStream = null;
+    }
+    var video = el('cameraVideo');
+    if (video) video.srcObject = null;
+    if (el('startCamera')) el('startCamera').classList.remove('hidden');
+    if (el('stopCamera')) el('stopCamera').classList.add('hidden');
+  }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(console.error);
-  });
-}
+  function closePanels() {
+    var panels = $$('.side-panel');
+    for (var i = 0; i < panels.length; i++) panels[i].classList.add('hidden');
+    var navs = $$('.nav-item');
+    for (var j = 0; j < navs.length; j++) navs[j].classList.remove('active');
+    var scoreNav = document.querySelector('.nav-item[data-tab="score"]');
+    if (scoreNav) scoreNav.classList.add('active');
+    stopCamera();
+  }
 
-function saveState() {
-  try {
-    localStorage.setItem('digiumpire_state', JSON.stringify({
-      teamA: state.teamA, teamB: state.teamB, totalOvers: state.totalOvers,
-      innings: state.innings, runs: state.runs, wickets: state.wickets,
-      balls: state.balls, extras: state.extras, partnership: state.partnership,
-      batsmen: state.batsmen, bowlers: state.bowlers,
-      strikerIdx: state.strikerIdx, nonStrikerIdx: state.nonStrikerIdx,
-      currentBowlerIdx: state.currentBowlerIdx, history: state.history.slice(0, 100)
-    }));
-  } catch (e) {}
-}
+  function renderHistory() {
+    var box = el('ballHistory');
+    if (!box) return;
+    if (!state.history.length) {
+      box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">No balls yet</p>';
+      return;
+    }
+    var html = '';
+    var max = Math.min(50, state.history.length);
+    for (var i = 0; i < max; i++) {
+      var h = state.history[i];
+      html += '<div class="ball-item"><span class="ball-num">' + h.over + '</span><span class="ball-desc">' + h.desc + '</span><span class="ball-runs">' + (h.runs > 0 ? '+' + h.runs : '') + '</span></div>';
+    }
+    box.innerHTML = html;
+  }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem('digiumpire_state');
-    if (raw) Object.assign(state, JSON.parse(raw));
-  } catch (e) {}
-}
+  function syncPlayerNamesFromInputs() {
+    var batsList = el('batsmenList');
+    var bowlList = el('bowlersList');
+    if (batsList) {
+      var inputs = batsList.querySelectorAll('input[data-type="bat"]');
+      for (var i = 0; i < inputs.length; i++) {
+        var idx = parseInt(inputs[i].getAttribute('data-idx'), 10);
+        if (state.batsmen[idx]) {
+          var v = (inputs[i].value || '').trim();
+          state.batsmen[idx].name = v || ('Batsman ' + (idx + 1));
+        }
+      }
+    }
+    if (bowlList) {
+      var inputs2 = bowlList.querySelectorAll('input[data-type="bowl"]');
+      for (var j = 0; j < inputs2.length; j++) {
+        var idx2 = parseInt(inputs2[j].getAttribute('data-idx'), 10);
+        if (state.bowlers[idx2]) {
+          var v2 = (inputs2[j].value || '').trim();
+          state.bowlers[idx2].name = v2 || ('Bowler ' + (idx2 + 1));
+        }
+      }
+    }
+  }
 
-loadState();
-updateUI();
+  function renderPlayers() {
+    var batsList = el('batsmenList');
+    var bowlList = el('bowlersList');
+    if (!batsList || !bowlList) return;
+    batsList.innerHTML = '';
+    bowlList.innerHTML = '';
+
+    for (var i = 0; i < state.batsmen.length; i++) {
+      (function (idx) {
+        var b = state.batsmen[idx];
+        var div = document.createElement('div');
+        div.className = 'player-item';
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.value = b.name;
+        input.setAttribute('data-idx', String(idx));
+        input.setAttribute('data-type', 'bat');
+        input.placeholder = 'Batsman name';
+        input.addEventListener('input', function () {
+          state.batsmen[idx].name = (input.value || '').trim() || ('Batsman ' + (idx + 1));
+        });
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'remove-btn';
+        btn.textContent = '\u2715';
+        btn.addEventListener('click', function () {
+          if (state.batsmen.length <= 2) { toast('Minimum 2 batsmen'); return; }
+          state.batsmen.splice(idx, 1);
+          if (state.strikerIdx >= state.batsmen.length) state.strikerIdx = 0;
+          if (state.nonStrikerIdx >= state.batsmen.length) state.nonStrikerIdx = Math.min(1, state.batsmen.length - 1);
+          renderPlayers();
+        });
+        div.appendChild(input);
+        div.appendChild(btn);
+        batsList.appendChild(div);
+      })(i);
+    }
+
+    for (var j = 0; j < state.bowlers.length; j++) {
+      (function (idx) {
+        var b = state.bowlers[idx];
+        var div = document.createElement('div');
+        div.className = 'player-item';
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.value = b.name;
+        input.setAttribute('data-idx', String(idx));
+        input.setAttribute('data-type', 'bowl');
+        input.placeholder = 'Bowler name';
+        input.addEventListener('input', function () {
+          state.bowlers[idx].name = (input.value || '').trim() || ('Bowler ' + (idx + 1));
+        });
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'remove-btn';
+        btn.textContent = '\u2715';
+        btn.addEventListener('click', function () {
+          if (state.bowlers.length <= 1) { toast('Minimum 1 bowler'); return; }
+          state.bowlers.splice(idx, 1);
+          if (state.currentBowlerIdx >= state.bowlers.length) state.currentBowlerIdx = 0;
+          renderPlayers();
+        });
+        div.appendChild(input);
+        div.appendChild(btn);
+        bowlList.appendChild(div);
+      })(j);
+    }
+  }
+
+  function startCamera() {
+    stopCamera();
+    var video = el('cameraVideo');
+    if (!video) { toast('Video element not found'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast('Camera not supported'); return;
+    }
+    var tryConstraints = [
+      { video: { facingMode: { ideal: 'environment' } }, audio: false },
+      { video: true, audio: false }
+    ];
+    function tryNext(i) {
+      if (i >= tryConstraints.length) {
+        toast('Camera access failed. Permission allow karo.');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia(tryConstraints[i]).then(function (stream) {
+        cameraStream = stream;
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        video.muted = true;
+        var p = video.play();
+        if (p && p.catch) p.catch(function () {});
+        if (el('startCamera')) el('startCamera').classList.add('hidden');
+        if (el('stopCamera')) el('stopCamera').classList.remove('hidden');
+        toast('Camera started');
+      }).catch(function (err) {
+        console.error(err);
+        tryNext(i + 1);
+      });
+    }
+    tryNext(0);
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem('digiumpire_state', JSON.stringify({
+        teamA: state.teamA, teamB: state.teamB, totalOvers: state.totalOvers,
+        innings: state.innings, runs: state.runs, wickets: state.wickets,
+        balls: state.balls, extras: state.extras, partnership: state.partnership,
+        batsmen: state.batsmen, bowlers: state.bowlers,
+        strikerIdx: state.strikerIdx, nonStrikerIdx: state.nonStrikerIdx,
+        currentBowlerIdx: state.currentBowlerIdx, history: state.history.slice(0, 100)
+      }));
+    } catch (e) {}
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem('digiumpire_state');
+      if (raw) {
+        var saved = JSON.parse(raw);
+        for (var k in saved) {
+          if (saved.hasOwnProperty(k)) state[k] = saved[k];
+        }
+      }
+    } catch (e) {}
+  }
+
+  function bindEvents() {
+    var runBtns = $$('.score-btn.run');
+    for (var i = 0; i < runBtns.length; i++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var r = parseInt(btn.getAttribute('data-runs'), 10);
+          var labels = { 0: 'Dot', 1: '1 run', 2: '2 runs', 3: '3 runs', 4: 'FOUR!', 6: 'SIX!' };
+          addBall(labels[r] || (r + ' runs'), r, false, false, true);
+          if (r === 4 || r === 6) toast(labels[r]);
+        });
+      })(runBtns[i]);
+    }
+
+    var extraBtns = $$('.score-btn.extra');
+    for (var e = 0; e < extraBtns.length; e++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var type = btn.getAttribute('data-extra');
+          if (type === 'wide') { addBall('Wide +1', 1, true, false, false); toast('Wide'); }
+          else if (type === 'bye') { addBall('Bye +1', 1, true, false, true); toast('Bye'); }
+          else if (type === 'legbye') { addBall('Leg Bye +1', 1, true, false, true); toast('Leg Bye'); }
+        });
+      })(extraBtns[e]);
+    }
+
+    var wicketBtn = document.querySelector('.score-btn.wicket');
+    if (wicketBtn) {
+      wicketBtn.addEventListener('click', function () {
+        if (state.wickets >= 10) { toast('All out!'); return; }
+        addBall('WICKET!', 0, false, true, true);
+        toast('Wicket!');
+      });
+    }
+
+    var undoBtn = el('undoBtn');
+    if (undoBtn) {
+      undoBtn.addEventListener('click', function () {
+        if (state.undoStack.length === 0) { toast('Nothing to undo'); return; }
+        var prev = state.undoStack.pop();
+        for (var k in prev) { if (prev.hasOwnProperty(k)) state[k] = prev[k]; }
+        updateUI();
+        toast('Undone');
+      });
+    }
+
+    var addBat = el('addBatsman');
+    if (addBat) {
+      addBat.addEventListener('click', function () {
+        state.batsmen.push({ name: 'Batsman ' + (state.batsmen.length + 1), runs: 0, balls: 0, out: false });
+        renderPlayers();
+      });
+    }
+    var addBowl = el('addBowler');
+    if (addBowl) {
+      addBowl.addEventListener('click', function () {
+        state.bowlers.push({ name: 'Bowler ' + (state.bowlers.length + 1), overs: 0, balls: 0, runs: 0, wickets: 0 });
+        renderPlayers();
+      });
+    }
+
+    var saveBtn = el('saveSetup');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        syncPlayerNamesFromInputs();
+        var ta = el('inputTeamA');
+        var tb = el('inputTeamB');
+        var ov = el('inputOvers');
+        state.teamA = (ta && ta.value ? ta.value.trim() : '') || 'Team 1';
+        state.teamB = (tb && tb.value ? tb.value.trim() : '') || 'Team 2';
+        state.totalOvers = (ov && parseInt(ov.value, 10)) || 20;
+        closePanels();
+        updateUI();
+        toast('Match setup saved');
+      });
+    }
+
+    var resetBtn = el('resetMatch');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        if (!confirm('Reset entire match?')) return;
+        state.runs = 0; state.wickets = 0; state.balls = 0; state.extras = 0;
+        state.partnership = 0; state.history = []; state.undoStack = [];
+        for (var i = 0; i < state.batsmen.length; i++) {
+          state.batsmen[i].runs = 0; state.batsmen[i].balls = 0; state.batsmen[i].out = false;
+        }
+        for (var j = 0; j < state.bowlers.length; j++) {
+          state.bowlers[j].balls = 0; state.bowlers[j].runs = 0; state.bowlers[j].wickets = 0;
+        }
+        state.strikerIdx = 0; state.nonStrikerIdx = 1; state.currentBowlerIdx = 0;
+        updateUI();
+        toast('Match reset');
+      });
+    }
+
+    var clearHist = el('clearHistory');
+    if (clearHist) {
+      clearHist.addEventListener('click', function () {
+        state.history = [];
+        renderHistory();
+      });
+    }
+
+    if (el('startCamera')) el('startCamera').addEventListener('click', startCamera);
+    if (el('stopCamera')) el('stopCamera').addEventListener('click', stopCamera);
+
+    var speedStart = el('speedStart');
+    if (speedStart) {
+      speedStart.addEventListener('click', function () {
+        speedStartTime = performance.now();
+        speedStart.disabled = true;
+        if (el('speedStop')) el('speedStop').disabled = false;
+        if (el('speedDisplay')) el('speedDisplay').textContent = '...';
+        toast('Timing started');
+      });
+    }
+    var speedStop = el('speedStop');
+    if (speedStop) {
+      speedStop.addEventListener('click', function () {
+        if (!speedStartTime) return;
+        var elapsed = (performance.now() - speedStartTime) / 1000;
+        var speedKmh = Math.round((18.5 / elapsed) * 3.6);
+        if (el('speedDisplay')) el('speedDisplay').textContent = speedKmh + ' km/h';
+        if (speedStart) speedStart.disabled = false;
+        speedStop.disabled = true;
+        speedStartTime = null;
+        toast(speedKmh + ' km/h');
+      });
+    }
+
+    if (el('callWide')) {
+      el('callWide').addEventListener('click', function () {
+        addBall('Wide +1 (Camera)', 1, true, false, false);
+        toast('Wide called');
+      });
+    }
+
+    var navItems = $$('.nav-item');
+    for (var n = 0; n < navItems.length; n++) {
+      (function (item) {
+        item.addEventListener('click', function () {
+          var tab = item.getAttribute('data-tab');
+          closePanels();
+          item.classList.add('active');
+          if (tab === 'players') {
+            if (el('playersPanel')) el('playersPanel').classList.remove('hidden');
+            renderPlayers();
+            if (el('inputTeamA')) el('inputTeamA').value = state.teamA;
+            if (el('inputTeamB')) el('inputTeamB').value = state.teamB;
+            if (el('inputOvers')) el('inputOvers').value = state.totalOvers;
+          } else if (tab === 'camera') {
+            if (el('cameraPanel')) el('cameraPanel').classList.remove('hidden');
+          } else if (tab === 'history') {
+            if (el('historyPanel')) el('historyPanel').classList.remove('hidden');
+            renderHistory();
+          }
+        });
+      })(navItems[n]);
+    }
+
+    var closeBtns = $$('.close-panel');
+    for (var c = 0; c < closeBtns.length; c++) {
+      closeBtns[c].addEventListener('click', closePanels);
+    }
+
+    if (el('menuBtn')) {
+      el('menuBtn').addEventListener('click', function () {
+        if (el('menuOverlay')) el('menuOverlay').classList.remove('hidden');
+      });
+    }
+    var menuOverlay = el('menuOverlay');
+    if (menuOverlay) {
+      menuOverlay.addEventListener('click', function (e) {
+        if (e.target === menuOverlay || (e.target.classList && e.target.classList.contains('close-menu'))) {
+          menuOverlay.classList.add('hidden');
+        }
+      });
+    }
+    var menuItems = $$('.menu-item[data-action]');
+    for (var m = 0; m < menuItems.length; m++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var action = btn.getAttribute('data-action');
+          if (menuOverlay) menuOverlay.classList.add('hidden');
+          if (action === 'new-innings') {
+            state.innings = state.innings === 1 ? 2 : 1;
+            state.runs = 0; state.wickets = 0; state.balls = 0; state.extras = 0;
+            state.partnership = 0; state.history = [];
+            for (var i = 0; i < state.batsmen.length; i++) {
+              state.batsmen[i].runs = 0; state.batsmen[i].balls = 0; state.batsmen[i].out = false;
+            }
+            for (var j = 0; j < state.bowlers.length; j++) {
+              state.bowlers[j].balls = 0; state.bowlers[j].runs = 0; state.bowlers[j].wickets = 0;
+            }
+            updateUI();
+            toast('Innings ' + state.innings + ' started');
+          } else if (action === 'export') {
+            var text = state.teamA + ' vs ' + state.teamB + '\n' + state.runs + '/' + state.wickets + ' (' + getOversText() + ')';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(function () { toast('Scorecard copied!'); }).catch(function () { toast(text); });
+            } else { toast(text); }
+          } else if (action === 'about') {
+            toast('DigiUmpire v1.1');
+          }
+        });
+      })(menuItems[m]);
+    }
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (el('installBanner')) el('installBanner').classList.remove('hidden');
+    });
+    if (el('installBtn')) {
+      el('installBtn').addEventListener('click', function () {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function (result) {
+          if (result.outcome === 'accepted') toast('App installed!');
+          deferredPrompt = null;
+          if (el('installBanner')) el('installBanner').classList.add('hidden');
+        });
+      });
+    }
+    if (el('dismissInstall')) {
+      el('dismissInstall').addEventListener('click', function () {
+        if (el('installBanner')) el('installBanner').classList.add('hidden');
+      });
+    }
+  }
+
+  function init() {
+    loadState();
+    bindEvents();
+    updateUI();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
+    });
+  }
+})();
