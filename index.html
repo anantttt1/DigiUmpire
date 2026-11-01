@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a1f12" />
+  <meta name="theme-color" content="#0a0a0a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="DigiUmpire" />
@@ -43,9 +43,9 @@
   <main class="score-main">
     <div class="match-info">
       <div class="team-names">
-        <span id="teamAName" class="team-name">Team A</span>
+        <span id="teamAName" class="team-name">Mumbai Indians</span>
         <span class="vs">vs</span>
-        <span id="teamBName" class="team-name">Team B</span>
+        <span id="teamBName" class="team-name">Chennai Super Kings</span>
       </div>
       <div class="innings-badge" id="inningsBadge">1st Innings</div>
     </div>
@@ -85,17 +85,17 @@
     <div class="current-players">
       <div class="batsman-card active" id="strikerCard">
         <div class="player-role">Striker ★</div>
-        <div class="player-name" id="strikerName">Batsman 1</div>
+        <div class="player-name" id="strikerName">Rohit Sharma</div>
         <div class="player-stats"><span id="strikerRuns">0</span> (<span id="strikerBalls">0</span>)</div>
       </div>
       <div class="batsman-card" id="nonStrikerCard">
         <div class="player-role">Non-Striker</div>
-        <div class="player-name" id="nonStrikerName">Batsman 2</div>
+        <div class="player-name" id="nonStrikerName">Virat Kohli</div>
         <div class="player-stats"><span id="nonStrikerRuns">0</span> (<span id="nonStrikerBalls">0</span>)</div>
       </div>
       <div class="bowler-card">
         <div class="player-role">Bowler</div>
-        <div class="player-name" id="bowlerName">Bowler 1</div>
+        <div class="player-name" id="bowlerName">Jasprit Bumrah</div>
         <div class="player-stats"><span id="bowlerOvers">0.0</span> • <span id="bowlerRuns">0</span>/<span id="bowlerWkts">0</span></div>
       </div>
     </div>
@@ -149,23 +149,23 @@
     </div>
     <div class="panel-body">
       <div class="setup-section">
-        <label>Team A Name</label>
-        <input type="text" id="inputTeamA" placeholder="India" value="Team A" />
+        <label>Team 1 Name</label>
+        <input type="text" id="inputTeamA" placeholder="Mumbai Indians" value="Mumbai Indians" />
       </div>
       <div class="setup-section">
-        <label>Team B Name</label>
-        <input type="text" id="inputTeamB" placeholder="Australia" value="Team B" />
+        <label>Team 2 Name</label>
+        <input type="text" id="inputTeamB" placeholder="Chennai Super Kings" value="Chennai Super Kings" />
       </div>
       <div class="setup-section">
         <label>Total Overs</label>
         <input type="number" id="inputOvers" min="1" max="50" value="20" />
       </div>
 
-      <h3>Batting Lineup (Team A)</h3>
+      <h3>🏏 Batting Lineup (rename freely)</h3>
       <div id="batsmenList" class="player-list"></div>
       <button class="btn-add" id="addBatsman">+ Add Batsman</button>
 
-      <h3>Bowling Attack (Team B)</h3>
+      <h3>🎯 Bowling Attack (rename freely)</h3>
       <div id="bowlersList" class="player-list"></div>
       <button class="btn-add" id="addBowler">+ Add Bowler</button>
 
