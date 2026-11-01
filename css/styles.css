@@ -45,7 +45,6 @@ body {
   padding-bottom: calc(70px + var(--safe-bottom));
 }
 
-/* ===== Install Banner ===== */
 .install-banner {
   position: fixed;
   top: 0;
@@ -87,7 +86,6 @@ body {
   opacity: 0.8;
 }
 
-/* ===== Header ===== */
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -129,7 +127,6 @@ body {
   justify-content: center;
 }
 
-/* ===== Score Main ===== */
 .score-main {
   padding: 16px;
   flex: 1;
@@ -224,7 +221,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Current Players */
 .current-players {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -266,13 +262,18 @@ body {
 }
 .bowler-card .player-stats { margin-top: 0; }
 
-/* ===== Scoring Panel ===== */
 .scoring-panel {
   padding: 0 12px 12px;
 }
-.runs-grid, .extras-grid {
+.runs-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.extras-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -313,7 +314,6 @@ body {
   font-size: 13px;
 }
 
-/* ===== Bottom Nav ===== */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -347,7 +347,6 @@ body {
 }
 .nav-icon { font-size: 20px; }
 
-/* ===== Side Panels ===== */
 .side-panel {
   position: fixed;
   top: 0;
@@ -498,7 +497,6 @@ body {
 }
 .btn-secondary.full { width: 100%; }
 
-/* ===== Camera ===== */
 .camera-container {
   position: relative;
   width: 100%;
@@ -548,7 +546,7 @@ body {
   background: rgba(0,0,0,0.6);
 }
 .guide-label.wide-left { left: 4%; top: 10%; color: #fbbf24; }
-.guide-label.wide-right { right: 4%; top: 10%; color: #ef4444; }
+.guide-label.wide-right { right: 4%; top: 10%; color: #fbbf24; }
 .guide-label.crease { left: 50%; transform: translateX(-50%); bottom: 24%; color: #ef4444; }
 
 .camera-controls {
@@ -623,9 +621,7 @@ body {
   color: white;
 }
 .btn-decision.wide { background: #f59e0b; }
-.btn-decision.noball { background: #ef4444; }
 
-/* ===== History ===== */
 .ball-history {
   display: flex;
   flex-direction: column;
@@ -656,7 +652,6 @@ body {
   color: var(--green-light);
 }
 
-/* ===== Menu ===== */
 .menu-overlay {
   position: fixed;
   inset: 0;
@@ -694,7 +689,6 @@ body {
   text-align: center;
 }
 
-/* ===== Toast ===== */
 .toast {
   position: fixed;
   bottom: calc(90px + var(--safe-bottom));
@@ -717,10 +711,8 @@ body {
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* Utility */
 .hidden { display: none !important; }
 
-/* Landscape / larger screens */
 @media (min-width: 500px) {
   body {
     border-left: 1px solid var(--border);
